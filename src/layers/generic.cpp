@@ -228,16 +228,18 @@ namespace marian {
       }
 
       if(tiedParam_) {
-        Wt_ = tiedParam_;
+        tmpWt_ = tiedParam_;
       } else {
         if (graph_->get(name + "_W")) { // support of legacy models that did not transpose
-          Wt_ = graph_->param(name + "_W", {inputDim, numOutputClasses}, inits::glorotUniform(true, false));
+          tmpWt_ = graph_->param(name + "_W", {inputDim, numOutputClasses}, inits::glorotUniform(true, false));
           isLegacyUntransposedW = true;
         }
         else // this is the regular case:
-          Wt_ = graph_->param(name + "_Wt", {numOutputClasses, inputDim}, inits::glorotUniform(false, true));
+          tmpWt_ = graph_->param(name + "_Wt", {numOutputClasses, inputDim}, inits::glorotUniform(false, true));
       }
-
+      Wt_ = 1.0f * tmpWt_;
+      //Wt_ = tmpWt_;
+      
       b_ = graph_->param(name + "_b", {1, numOutputClasses}, inits::zeros());
 
       /*const*/ int lemmaDimEmb = options_->get<int>("lemma-dim-emb", 0);

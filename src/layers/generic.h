@@ -232,6 +232,7 @@ class Output : public LayerBase, public IUnaryLogitLayer, public IHasShortList {
 private:
   // parameters held by this layer
   Expr Wt_; // weight matrix is stored transposed for efficiency
+  Expr tmpWt_;
   Expr b_;
   Expr lemmaEt_; // re-embedding matrix for lemmas [lemmaDimEmb x lemmaVocabSize]
   bool isLegacyUntransposedW{false}; // legacy-model emulation: W is stored in non-transposed form

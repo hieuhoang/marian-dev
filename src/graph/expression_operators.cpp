@@ -178,16 +178,16 @@ Expr operator-(float a, Expr b) {
 }
 
 Expr operator*(float a, Expr b) {
-  if (a == 1.0f)
-    return b;
-  else
+  //if (a == 1.0f)
+  //  return b;
+  //else
     return Expression<ScalarMultNodeOp>(b, a);
 }
 
 Expr operator*(Expr a, float b) {
-  if (b == 1.0f)
-    return a;
-  else
+  //if (b == 1.0f)
+  //  return a;
+  //else
     return Expression<ScalarMultNodeOp>(a, b);
 }
 
