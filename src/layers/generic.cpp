@@ -228,17 +228,15 @@ namespace marian {
       }
 
       if(tiedParam_) {
-        tmpWt_ = tiedParam_;
+        Wt_ = tiedParam_;
       } else {
         if (graph_->get(name + "_W")) { // support of legacy models that did not transpose
-          tmpWt_ = graph_->param(name + "_W", {inputDim, numOutputClasses}, inits::glorotUniform(true, false));
+          Wt_ = graph_->param(name + "_W", {inputDim, numOutputClasses}, inits::glorotUniform(true, false));
           isLegacyUntransposedW = true;
         }
         else // this is the regular case:
-          tmpWt_ = graph_->param(name + "_Wt", {numOutputClasses, inputDim}, inits::glorotUniform(false, true));
+          Wt_ = graph_->param(name + "_Wt", {numOutputClasses, inputDim}, inits::glorotUniform(false, true));
       }
-      Wt_ = 1.0f * tmpWt_;
-      //Wt_ = tmpWt_;
       
       b_ = graph_->param(name + "_b", {1, numOutputClasses}, inits::zeros());
 
@@ -258,10 +256,12 @@ namespace marian {
 
     Logits Output::applyAsLogits(Expr input) /*override final*/ {
       lazyConstruct(input->shape()[-1]);
-
+      Expr tmpWt = sigmoid(Wt_) + 1.0f;
+      Expr tmpB = b_ * 0.0f;
+	
       if (shortlist_ && !cachedShortWt_) { // shortlisted versions of parameters are cached within one batch, then clear()ed
-        cachedShortWt_ = index_select(Wt_, isLegacyUntransposedW ? -1 : 0, shortlist_->indices());
-        cachedShortb_  = index_select(b_ ,                             -1, shortlist_->indices());
+        cachedShortWt_ = index_select(tmpWt, isLegacyUntransposedW ? -1 : 0, shortlist_->indices());
+        cachedShortb_  = index_select(tmpB,                             -1, shortlist_->indices());
       }
 
       if (factoredVocab_) {
@@ -285,8 +285,8 @@ namespace marian {
             factorB  = cachedShortb_;
           }
           else {
-            factorWt = slice(Wt_, isLegacyUntransposedW ? -1 : 0, Slice((int)range.first, (int)range.second));
-            factorB  = slice(b_,                              -1, Slice((int)range.first, (int)range.second));
+            factorWt = slice(tmpWt, isLegacyUntransposedW ? -1 : 0, Slice((int)range.first, (int)range.second));
+            factorB  = slice(tmpB,                              -1, Slice((int)range.first, (int)range.second));
           }
           /*const*/ int lemmaDimEmb = options_->get<int>("lemma-dim-emb", 0);
           if ((lemmaDimEmb == -2 || lemmaDimEmb == -3) && g > 0) { // -2/-3 means a gated transformer-like structure (-3 = hard-max)
@@ -402,7 +402,7 @@ namespace marian {
       else if (shortlist_)
         return Logits(affine(input, cachedShortWt_, cachedShortb_, false, /*transB=*/isLegacyUntransposedW ? false : true));
       else
-        return Logits(affine(input, Wt_, b_, false, /*transB=*/isLegacyUntransposedW ? false : true));
+        return Logits(affine(input, tmpWt, tmpB, false, /*transB=*/isLegacyUntransposedW ? false : true));
     }
   }
 
