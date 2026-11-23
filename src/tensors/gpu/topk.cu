@@ -5,6 +5,8 @@
 #include <cuda.h>
 #include <thrust/device_ptr.h>
 #include <thrust/functional.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
 #include <thrust/sort.h>
 
 #if CUDA_VERSION >= 11000
@@ -406,10 +408,7 @@ void TypedSortCUB(Ptr<Allocator> allocator, Tensor outVal, Tensor outInd, const 
   // create row iterator, this iterates through the indices of row start offsets, e.g. [0, cols, 2*cols, ...]
   // this is used to partition the input tensor into rows when sorting with the segmented sort
   auto rowEndOp        = [cols] HOST_DEVICE (int i) { return i * cols; };
-  using TransformOp    = decltype(rowEndOp);
-  using CountingIt     = cub::CountingInputIterator<int>;
-  using RowPartitionIt = cub::TransformInputIterator<int, TransformOp, CountingIt>;
-  RowPartitionIt rowPartitionIt(CountingIt(0), rowEndOp);
+  auto rowPartitionIt  = thrust::make_transform_iterator(thrust::counting_iterator<int>(0), rowEndOp);
 
   auto cubSortbyKey = [=](void* storage, size_t& storageSize, bool descending) {
     using cubSort = cub::DeviceSegmentedRadixSort;
